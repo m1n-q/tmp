@@ -1,0 +1,109 @@
+version: '2'
+
+services:
+  mariadb:
+    build: ./requirements/mariadb
+    environment:
+      - DB_VOLUME=${DB_VOLUME}
+
+      - MYSQL_DATADIR=${MYSQL_DATADIR}
+      - MYSQL_BIND_ADDRESS=${MYSQL_BIND_ADDRESS}
+      - MYSQL_PORT=${MYSQL_PORT}
+      - MYSQL_ROOT_HOST=${MYSQL_ROOT_HOST}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_REMOTE_HOST=${MYSQL_REMOTE_HOST}
+    volumes:
+      - db_volume:${DB_VOLUME}
+    networks:
+      - mynet
+    hostname: mariadb
+    container_name: mariadb
+    # ports:
+     # - "127.0.0.1:3306:3306"
+      #  0.0.0.0:3306 will allow all host's interfaces
+    restart: always
+    init: true
+#. -------------------------------------------------------------------------- .#
+  wordpress:
+    environment:
+      - PHP_FPM_PORT=${PHP_FPM_PORT}
+
+      - WORDPRESS_DB_HOST=${WORDPRESS_DB_HOST}
+      - WORDPRESS_DB_PORT=${WORDPRESS_DB_PORT}
+      - WORDPRESS_DB_USER=${WORDPRESS_DB_USER}
+      - WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
+      - WORDPRESS_DB_NAME=${WORDPRESS_DB_NAME}
+      - WORDPRESS_TABLE_PREFIX=${WORDPRESS_TABLE_PREFIX}
+      - WORDPRESS_AUTH_KEY=${WORDPRESS_AUTH_KEY}
+      - WORDPRESS_SECURE_AUTH_KEY=${WORDPRESS_SECURE_AUTH_KEY}
+      - WORDPRESS_LOGGED_IN_KEY=${WORDPRESS_LOGGED_IN_KEY}
+      - WORDPRESS_NONCE_KEY=${WORDPRESS_NONCE_KEY}
+      - WORDPRESS_AUTH_SALT=${WORDPRESS_AUTH_SALT}
+      - WORDPRESS_SECURE_AUTH_SALT=${WORDPRESS_SECURE_AUTH_SALT}
+      - WORDPRESS_LOGGED_IN_SALT=${WORDPRESS_LOGGED_IN_SALT}
+      - WORDPRESS_NONCE_SALT=${WORDPRESS_NONCE_SALT}
+
+      - WP_VOLUME=${WP_VOLUME}
+      - WORDPRESS_URL=${WORDPRESS_URL}
+      - WORDPRESS_USER_NAME=${WORDPRESS_USER_NAME}
+      - WORDPRESS_USER_PASSWORD=${WORDPRESS_USER_PASSWORD}
+      - WORDPRESS_USER_EMAIL=${WORDPRESS_USER_EMAIL}
+    depends_on:
+      - mariadb
+    volumes:
+      - wp_volume:${WP_VOLUME}
+    build: ./requirements/wordpress
+    networks:
+      - mynet
+    hostname: wordpress
+    container_name: wordpress
+    restart: always
+    init: true
+#. -------------------------------------------------------------------------- .#
+  nginx:
+    environment:
+      - WP_VOLUME=${WP_VOLUME}
+      - NGINX_ROOT_PATH=${NGINX_ROOT_PATH}
+      - NGINX_SERVER_NAME=${NGINX_SERVER_NAME}
+      - NGINX_USE_FASTCGI=${NGINX_USE_FASTCGI}
+      - NGINX_FASTCGI_HOST=${NGINX_FASTCGI_HOST}
+      - NGINX_FASTCGI_PORT=${NGINX_FASTCGI_PORT}
+
+    depends_on:
+      - wordpress
+    volumes:
+      - wp_volume:${WP_VOLUME}
+    build: ./requirements/nginx
+    ports:
+      - "443:443"
+    networks:
+      - mynet
+    hostname: nginx
+    container_name: nginx
+    restart: always
+    init: true
+#. -------------------------------------------------------------------------- .#
+
+volumes:
+  wp_volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${HOST_VOLUME}/wp
+
+  db_volume:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${HOST_VOLUME}/db
+
+
+networks:
+  mynet:
+    driver: bridge
+    name: mynet
